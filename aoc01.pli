@@ -1,0 +1,128 @@
+  /*******************************************************************/ 00001015
+  /*                                                                 */ 00002015
+  /* AOC 23 DAY ONE,   PARTS 1 + 2 FINAL                             */ 00003016
+  /*                                                                 */ 00003117
+  /* MUST BE COMPILED WITH OPTION: MARGINS(2,80)                     */ 00003218
+  /*                                                                 */ 00004015
+  /*******************************************************************/ 00005015
+   OC1: PROC OPTIONS (MAIN);                                            00010015
+                                                                        00020001
+  DCL INFILE FILE RECORD SEQUENTIAL;                                    00030000
+                                                                        00090103
+  DCL (LEN_VAL,I,LINE_COUNT) FIXED BIN (15) INIT (0);                   00090207
+                                                                        00090303
+  DCL EOF BIT (1) INIT ('0'B);                                          00091001
+  DCL DBG BIT (1) INIT ('0'B); /* DEBUG SWITCH    */                    00091113
+                                                                        00091213
+  DCL LINE_SUM PIC '99';                                                00091313
+  DCL 1 DIGITS BASED (ADDR(LINE_SUM)),                                  00091413
+        5 FIRST_DIGIT  PIC '9',                                         00091513
+        5 SECOND_DIGIT PIC '9';                                         00091613
+                                                                        00091713
+  DCL TOTAL_SUM PIC 'ZZZZZZZZ9' INIT (0);                               00091813
+                                                                        00091913
+  DCL INSTRING CHARACTER (255) INIT (' ');                              00092014
+                                                                        00092113
+  DCL (INLIST,LENGTH,ADDR) BUILTIN;                                     00092709
+                                                                        00092806
+  DCL (TO_STRING   VALUE ('ABCDEFGHIJKLMNOPQRSTUVWXYZ'),                00093113
+         from_string value ('abcdefghijklmnopqrstuvwxyz')) char;        00093211
+  ON ENDFILE(INFILE) EOF = '1'B;                                        00093306
+                                                                        00093401
+  READ FILE (INFILE) INTO (INSTRING); /* FIRST READ    */               00094009
+  DO WHILE (^EOF & INSTRING ^= '/*'); /* EOF TEST FILE */               00100006
+     INSTRING = TRANSLATE (INSTRING,TO_STRING,FROM_STRING);             00100111
+     LINE_COUNT = LINE_COUNT + 1;                                       00101007
+     IF DBG THEN PUT SKIP DATA (LINE_COUNT);                            00102014
+     LEN_VAL = LENGTH(INSTRING);                                        00110103
+     IF DBG THEN PUT SKIP DATA (INSTRING, LEN_VAL);                     00111014
+     FIRST_DIGIT = 0;                                                   00112006
+     SECOND_DIGIT = 0;                                                  00113006
+     DO I=1 TO LEN_VAL;                                                 00114006
+        IF (INLIST(SUBSTR(INSTRING,I,1),                                00115006
+           '1','2','3','4','5','6','7','8','9','0'))                    00115106
+           THEN DO;                                                     00116006
+                IF DBG THEN PUT SKIP LIST ('DIGIT FOUND AT: ', I);      00117014
+                IF FIRST_DIGIT=0                                        00117106
+                   THEN FIRST_DIGIT= SUBSTR(INSTRING,I,1);              00117213
+                SECOND_DIGIT = SUBSTR(INSTRING,I,1);                    00117313
+           END; /* IF INLIST */                                         00118012
+        IF SUBSTR(INSTRING,I,4) = 'ZERO'                                00118112
+           THEN DO;                                                     00118310
+                IF DBG THEN PUT SKIP LIST ('NUMBER WORD FOUND AT: ', I);00118414
+                IF FIRST_DIGIT=0                                        00118510
+                   THEN FIRST_DIGIT= 0;                                 00118613
+                SECOND_DIGIT = 0;                                       00118713
+           END; /* IF ZERO*/                                            00118812
+        IF SUBSTR(INSTRING,I,3) = 'ONE'                                 00118912
+           THEN DO;                                                     00119012
+                IF DBG THEN PUT SKIP LIST ('NUMBER WORD FOUND AT: ', I);00119114
+                IF FIRST_DIGIT=0                                        00119212
+                   THEN FIRST_DIGIT= 1;                                 00119313
+                SECOND_DIGIT = 1;                                       00119413
+           END; /* IF ONE */                                            00119512
+        IF SUBSTR(INSTRING,I,3) = 'TWO'                                 00119612
+           THEN DO;                                                     00119712
+                IF DBG THEN PUT SKIP LIST ('NUMBER WORD FOUND AT: ', I);00119814
+                IF FIRST_DIGIT=0                                        00119912
+                   THEN FIRST_DIGIT= 2;                                 00120013
+                SECOND_DIGIT = 2;                                       00120113
+           END; /* IF TWO */                                            00120212
+        IF SUBSTR(INSTRING,I,5) = 'THREE'                               00120312
+           THEN DO;                                                     00120412
+                IF DBG THEN PUT SKIP LIST ('NUMBER WORD FOUND AT: ', I);00120514
+                IF FIRST_DIGIT=0                                        00120612
+                   THEN FIRST_DIGIT= 3;                                 00120713
+                SECOND_DIGIT = 3;                                       00120813
+           END; /* IF three */                                          00120912
+        IF SUBSTR(INSTRING,I,4) = 'FOUR'                                00121012
+           THEN DO;                                                     00121112
+                IF DBG THEN PUT SKIP LIST ('NUMBER WORD FOUND AT: ', I);00121214
+                IF FIRST_DIGIT=0                                        00121312
+                   THEN FIRST_DIGIT= 4;                                 00121413
+                SECOND_DIGIT = 4;                                       00121513
+           END; /* IF FOUR  */                                          00121612
+        IF SUBSTR(INSTRING,I,4) = 'FIVE'                                00121712
+           THEN DO;                                                     00121812
+                IF DBG THEN PUT SKIP LIST ('NUMBER WORD FOUND AT: ', I);00121914
+                IF FIRST_DIGIT=0                                        00122012
+                   THEN FIRST_DIGIT= 5;                                 00122113
+                SECOND_DIGIT = 5;                                       00122213
+           END; /* IF FIVE  */                                          00122312
+        IF SUBSTR(INSTRING,I,3) = 'SIX'                                 00122412
+           THEN DO;                                                     00122512
+                IF DBG THEN PUT SKIP LIST ('NUMBER WORD FOUND AT: ', I);00122614
+                IF FIRST_DIGIT=0                                        00122712
+                   THEN FIRST_DIGIT= 6;                                 00122813
+                SECOND_DIGIT = 6;                                       00122913
+           END; /* IF SIX   */                                          00123012
+        IF SUBSTR(INSTRING,I,5) = 'SEVEN'                               00123112
+           THEN DO;                                                     00123212
+                IF DBG THEN PUT SKIP LIST ('NUMBER WORD FOUND AT: ', I);00123314
+                IF FIRST_DIGIT=0                                        00123412
+                   THEN FIRST_DIGIT= 7;                                 00123513
+                SECOND_DIGIT = 7;                                       00123613
+           END; /* IF SEVEN */                                          00123712
+        IF SUBSTR(INSTRING,I,5) = 'EIGHT'                               00123812
+           THEN DO;                                                     00123912
+                IF DBG THEN PUT SKIP LIST ('NUMBER WORD FOUND AT: ', I);00124014
+                IF FIRST_DIGIT=0                                        00124112
+                   THEN FIRST_DIGIT= 8;                                 00124213
+                SECOND_DIGIT = 8;                                       00124313
+           END; /* IF EIGHT */                                          00124412
+        IF SUBSTR(INSTRING,I,4) = 'NINE'                                00124512
+           THEN DO;                                                     00124612
+                IF DBG THEN PUT SKIP LIST ('NUMBER WORD FOUND AT: ', I);00124714
+                IF FIRST_DIGIT=0                                        00124812
+                   THEN FIRST_DIGIT= 9;                                 00124913
+                SECOND_DIGIT = 9;                                       00125013
+           END; /* IF NINE  */                                          00125112
+     END; /* FOR I */                                                   00125212
+     IF SECOND_DIGIT = 0                                                00125312
+        THEN SECOND_DIGIT = FIRST_DIGIT;                                00125412
+     TOTAL_SUM = TOTAL_SUM + LINE_SUM;                                  00125512
+     PUT SKIP LIST ('SUMUP:',LINE_SUM,TOTAL_SUM);                       00125612
+     READ FILE (INFILE) INTO (INSTRING);                                00125712
+  END; /* DO WHILE */                                                   00125812
+  END AOC1;                                                             00126013
+

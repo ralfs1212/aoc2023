@@ -1,0 +1,254 @@
+ /***********************************************************************/
+ /*                                                                     */
+ /* AOC 23 DAY TWO,   PART  1    ALTERNATE VERSION                      */
+ /*                                                                     */
+ /* MUST BE COMPILED WITH OPTION: MARGINS(2,80)                         */
+ /*                                                                     */
+ /***********************************************************************/
+  AOC02: PROC OPTIONS (MAIN);
+
+  DCL INFILE FILE RECORD SEQUENTIAL;
+
+  DCL (LEN_VAL,I,LINE_COUNT) FIXED BIN (15) INIT (0);
+
+  DCL EOF BIT (1) INIT ('0'B);
+  DCL DBG BIT (1) INIT ('1'B);       /* DEBUG SWITCH         */
+  DCL INVALID_IND BIT (1) INIT ('0'B); /* GAME INVALID INDICATOR */
+
+  DCL COUNT PIC '999';
+  DCL 1 DIGITS BASED (ADDR(COUNT)),
+        5 LEFT_DIGIT   PIC '9' ,
+        5 MIDDLE_DIGIT PIC '9' ,
+        5 RIGHT_DIGIT  PIC '9';
+
+  DCL 1 COLOR_COUNT,
+        5 BLUE_COUNT       DEC FIXED (7,0) INIT (0),
+        5 BLUE_COUNT_SAVE  DEC FIXED (7,0) INIT (0),
+        5 BLUE_MAX         DEC FIXED (7,0) INIT (0),
+        5 RED_COUNT        DEC FIXED (7,0) INIT (0),
+        5 RED_COUNT_SAVE   DEC FIXED (7,0) INIT (0),
+        5 RED_MAX          DEC FIXED (7,0) INIT (0),
+        5 GREEN_COUNT      DEC FIXED (7,0) INIT (0),
+        5 GREEN_COUNT_SAVE DEC FIXED (7,0) INIT (0),
+        5 GREEN_MAX        DEC FIXED (7,0) INIT (0);
+
+  DCL 1 COLOR_BOUNDARIES,
+        5 BLUE_BOUND  DEC FIXED (7,0) VALUE (14),
+        5 GREEN_BOUND DEC FIXED (7,0) VALUE (13),
+        5 RED_BOUND   DEC FIXED (7,0) VALUE (12);
+
+  DCL GAME_NO DEC FIXED (3) INIT (0);
+  DCL SUBSET_NO DEC FIXED (3) INIT (0);
+
+  DCL TOTAL_SUM PIC 'ZZZZZZZZ9' INIT (0);
+
+  DCL INSTRING CHARACTER (255) INIT (' ');
+
+  DCL (INLIST,LENGTH,ADDR,SUBSTR,TRANSLATE) BUILTIN;
+
+  DCL (TO_STRING   VALUE ('ABCDEFGHIJKLMNOPQRSTUVWXYZ'),
+         from_string value ('abcdefghijklmnopqrstuvwxyz')) char;
+  ON ENDFILE(INFILE) EOF = '1'B;
+
+  READ FILE (INFILE) INTO (INSTRING); /* FIRST READ    */
+  DO WHILE (^EOF & INSTRING ^= '/*'); /* EOF INDICATOR FOR DEBUG */
+     INSTRING = TRANSLATE (INSTRING,TO_STRING,FROM_STRING);
+     LINE_COUNT = LINE_COUNT + 1;
+     IF DBG THEN PUT SKIP (2) DATA (LINE_COUNT);
+     LEN_VAL = LENGTH(INSTRING);
+     IF DBG THEN PUT SKIP DATA (INSTRING);
+
+
+     COLOR_COUNT = '';   /* initialize color counters */
+
+
+     DO I=1 TO LEN_VAL;
+
+        IF SUBSTR(INSTRING,I,4) = 'GAME'  /* GAME SECTION OF RECORD */
+           THEN DO;
+
+
+             SELECT;
+              WHEN (                 /* GAME # THREE DIGITS */
+              (INLIST(SUBSTR(INSTRING,I+5,1),
+                   '1','2','3','4','5','6','7','8','9','0'))
+                &  (INLIST(SUBSTR(INSTRING,I+6,1),
+                   '1','2','3','4','5','6','7','8','9','0' ))
+                &  (INLIST(SUBSTR(INSTRING,I+7,1),
+                   '1','2','3','4','5','6','7','8','9','0' ))
+                   )
+                   DO;
+                        LEFT_DIGIT= SUBSTR(INSTRING,I+5,1);
+                        MIDDLE_DIGIT= SUBSTR(INSTRING,I+6,1);
+                        RIGHT_DIGIT= SUBSTR(INSTRING,I+7,1);
+                   END;
+              WHEN (                  /* GAME # TWO   DIGITS */
+              (INLIST(SUBSTR(INSTRING,I+5,1),
+                   '1','2','3','4','5','6','7','8','9','0'))
+                &  (INLIST(SUBSTR(INSTRING,I+6,1),
+                   '1','2','3','4','5','6','7','8','9','0' ))
+                   )
+                   DO;
+                      LEFT_DIGIT = 0;
+                      MIDDLE_DIGIT= SUBSTR(INSTRING,I+5,1);
+                      RIGHT_DIGIT= SUBSTR(INSTRING,I+6,1);
+                   END;
+               WHEN (                  /* GAME # ONE   DIGIT  */
+                INLIST(SUBSTR(INSTRING,I+5,1),
+                    '1','2','3','4','5','6','7','8','9','0')
+                     )
+                    DO;
+                      LEFT_DIGIT= 0;
+                      MIDDLE_DIGIT = 0;
+                       RIGHT_DIGIT= SUBSTR(INSTRING,I+5,1);
+                    END;
+               OTHERWISE               /* DO NOTHING          */
+                    DO;
+                    END; /* OTHERWISE */
+             END;        /* SELECT    */
+
+           GAME_NO = COUNT;
+
+
+           END;          /* IF GAME   */
+
+
+           ELSE DO;                       /* COLOR SECTION OF RECORD   */
+             LEFT_DIGIT = 0;              /* COLOR COUNTS ALWAYS < 100 */
+             SELECT;
+                WHEN (
+                  SUBSTR(INSTRING,I,4) = 'BLUE'
+                     )
+                  DO;
+                    RIGHT_DIGIT = SUBSTR(INSTRING,I-2,1);
+                    IF (INLIST(SUBSTR(INSTRING,I-3,1),     /* two digits */
+                       '1','2','3','4','5','6','7','8','9','0',' '))
+                      THEN DO;
+                       MIDDLE_DIGIT= SUBSTR(INSTRING,I-3,1);
+
+                       IF COUNT > BLUE_COUNT_SAVE          /* VALUE       */
+                       THEN
+                          BLUE_MAX = COUNT;
+
+                       BLUE_COUNT_SAVE = COUNT;            /* SAVE HIGHEST*/
+
+                       BLUE_COUNT = BLUE_COUNT + COUNT;
+
+                       IF DBG THEN PUT SKIP LIST
+                       ('BLUE COUNTERS :', COUNT, BLUE_COUNT, BLUE_MAX);
+                      END;
+                  END;    /* WHEN BLUE */
+                WHEN (
+                  SUBSTR(INSTRING,I,3) = 'RED'
+                     )
+                  DO;
+                    RIGHT_DIGIT = SUBSTR(INSTRING,I-2,1);
+                    IF (INLIST(SUBSTR(INSTRING,I-3,1),     /* two digits */
+                       '1','2','3','4','5','6','7','8','9','0',' '))
+                      THEN DO;
+                       MIDDLE_DIGIT= SUBSTR(INSTRING,I-3,1);
+
+                       IF COUNT > RED_COUNT_SAVE          /* VALUE       */
+                       THEN
+                          RED_MAX = COUNT;
+
+                       RED_COUNT_SAVE = COUNT;            /* SAVE HIGHEST*/
+
+                       RED_COUNT = RED_COUNT + COUNT;
+
+                       IF DBG THEN PUT SKIP LIST
+                       ('RED COUNTERS :', COUNT, RED_COUNT, RED_MAX);
+                      END;
+                  END;    /* WHEN RED */
+                WHEN (
+                  SUBSTR(INSTRING,I,5) = 'GREEN'
+                     )
+                  DO;
+                    RIGHT_DIGIT = SUBSTR(INSTRING,I-2,1);
+                    IF (INLIST(SUBSTR(INSTRING,I-3,1),     /* two digits */
+                       '1','2','3','4','5','6','7','8','9','0',' '))
+                      THEN DO;
+                       MIDDLE_DIGIT= SUBSTR(INSTRING,I-3,1);
+
+                       IF COUNT > GREEN_COUNT_SAVE        /* VALUE       */
+                       THEN
+                          GREEN_MAX = COUNT;
+
+                       GREEN_COUNT_SAVE = COUNT;          /* SAVE HIGHEST*/
+
+                       GREEN_COUNT = GREEN_COUNT + COUNT;
+
+                       IF DBG THEN PUT SKIP LIST
+                       (' GREEN COUNTERS :', COUNT, GREEN_COUNT, GREEN_MAX);
+                      END;
+                  END;    /* WHEN GREEN */
+                WHEN (
+                  SUBSTR(INSTRING,I,1) = ';'
+                     )
+                  DO;
+                    CALL SUBSET_FINISH;
+               /*   IF DBG THEN PUT SKIP LIST
+                    ('SUBSET',I, SUBSTR(INSTRING,I,1) );  */
+                  END;
+                OTHERWISE                  /* DO NOTHING */
+                  DO;
+               /*   IF DBG THEN PUT SKIP LIST
+                    ('OTHER',I, SUBSTR(INSTRING,I,1) );   */
+                  END;
+             END;     /* SELECT    */
+           END;       /* ELSE      */
+     END;                 /* DO I TO LEN_VAL */
+     CALL GAME_FINISH;
+     READ FILE (INFILE) INTO (INSTRING);
+  END; /* DO WHILE */
+
+  PUT SKIP LIST ('**** FINISH !!! SUMUP: ', TOTAL_SUM);
+  /***********************************************************************/
+  /*                                                                     */
+  /* FINISH SUBSET ROUTINE                                               */
+  /*                                                                     */
+  /***********************************************************************/
+  SUBSET_FINISH: PROC;
+    SUBSET_NO = SUBSET_NO + 1;
+
+    IF (BLUE_COUNT <= BLUE_BOUND) &
+       (RED_COUNT <= RED_BOUND) &
+       (GREEN_COUNT <= GREEN_BOUND)
+    THEN DO;
+       IF DBG THEN PUT SKIP LIST ('SUBSET: ', SUBSET_NO,   'VALID');
+    END;
+    ELSE DO;
+       INVALID_IND = '1'B;
+       IF DBG THEN PUT SKIP LIST ('SUBSET: ', SUBSET_NO,   'INVALID');
+    END;
+
+    BLUE_COUNT = 0;
+    GREEN_COUNT = 0;
+    RED_COUNT = 0;
+
+    END SUBSET_FINISH;
+  /***********************************************************************/
+  /*                                                                     */
+  /* FINISH GAME ROUTINE                                                 */
+  /*                                                                     */
+  /***********************************************************************/
+  GAME_FINISH: PROC;
+
+    CALL SUBSET_FINISH;   /* last subset, no semicolon */
+
+    IF ^ (INVALID_IND)
+    THEN DO;
+       IF DBG THEN PUT SKIP LIST ('GAME VALID !!!');
+
+       TOTAL_SUM = TOTAL_SUM + GAME_NO;
+    END;
+
+
+    IF DBG THEN PUT SKIP LIST ('** GAME #:', GAME_NO, 'TOTAL: ', TOTAL_SUM);
+
+    COLOR_COUNT ='';
+    INVALID_IND = '0'B;
+    SUBSET_NO = 0;
+    END GAME_FINISH;
+  END AOC02;
+

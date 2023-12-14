@@ -1,0 +1,208 @@
+ /***********************************************************************/
+ /*                                                                     */
+ /* aoc 23 day three, part  1  final                                    */
+ /*                                                                     */
+ /* must be compiled with option: MARGINS(2,80)                         */
+ /*                                                                     */
+ /***********************************************************************/
+ aoc03: proc options(main);
+
+ dcl infile file record sequential;
+
+ dcl (len_val,i,line_count) fixed bin (15) init (0);
+
+ dcl eof bit (1) init ('0'b);
+ dcl dbg bin fixed (15) init (1); /* debug           */
+
+ dcl count pic '999';
+ dcl 1 digits based (addr(count)),
+       5 left_digit   pic '9' ,
+       5 middle_digit pic '9' ,
+       5 right_digit  pic '9';
+
+ dcl part_no dec fixed (15) init (0);
+ dcl part_no_count dec fixed (7) init (0);
+ dcl onlynmbr_count dec fixed (7) init (0);
+
+ dcl total_sum pic 'zzzzzzzzzzzzzz9' init (0);
+
+ dcl matrix (3) char (140) init ((*)' ');
+ dcl teststring char (140) based(testptr);
+ dcl testptr ptr;
+
+ dcl digit_1 pic '9' init (0);
+ dcl digit_2 pic '(2)9' init (0);
+ dcl digit_3 pic '(3)9' init (0);
+ dcl digit_4 pic '(4)9' init (0);
+ dcl digit_5 pic '(5)9' init (0);
+ dcl digit_6 pic '(6)9' init (0);
+
+ dcl instring character (255) init (' ');
+
+ dcl (inlist,length,addr,substr,translate,index,verify,trim) builtin;
+
+ dcl (to_string   value ('@@@@@@@@@@@@@@@'),
+        from_string value ('-=+$%&/@*#<>³^')) char;
+ on endfile(infile) eof = '1'b;
+
+ /***********************************************************************/
+ /* Main Routine                                                        */
+ /***********************************************************************/
+
+ read file (infile) into (instring); /* first read    */
+ do while (^eof & instring ^= '/*'); /* eof indicator for debug */
+    instring = translate (instring,to_string,from_string);
+    line_count = line_count + 1;
+    if dbg = 3 then put skip (2) data (line_count);
+    len_val = length(instring);
+    if dbg = 3 then put skip data (instring);
+    i = verify(instring,from_string³³' .0123456789');
+    if i > 0
+      then do;
+         put skip list ('+++ non translated Character found +++');
+         put skip list (substr(instring,i,1));
+      end;
+
+    matrix (1) = matrix (2);
+    matrix (2) = matrix (3);
+    matrix (3) = substr(instring,1,140);
+
+    call test;
+
+
+    read file (infile) into (instring);
+ end; /* do while */
+
+ matrix (1) = matrix (2);         /* Last Record                    */
+ matrix (2) = matrix (3);
+ matrix (3) = ' ';
+
+ call test;
+ put skip list ('**** Finish !!! Sumup: ', total_sum);
+ put skip data (part_no_count, onlynmbr_count);
+
+ /***********************************************************************/
+ /* Test adjacency routine                                              */
+ /***********************************************************************/
+ test: proc;
+
+    dcl (j,k,l,m,n) bin fixed (15) init (0);
+
+    if matrix (2) = ' '           /* Matrix set up ?               */
+    then;
+    else do;
+       if dbg = 3 then do;
+          put skip list ('Record',line_count, ' in Test Position');
+          put skip data (matrix(2));
+       end;
+
+       testptr = addr(matrix(2));
+       len_val = length(teststring);
+
+       do j = 1 to len_val;
+         do while (inlist(substr(teststring,j,1),
+         '0','1','2','3','4','5','6','7','8','9') & (j <= len_Val));
+           if k = 0 then
+              k = j;             /* save start pos */
+           l = l + 1;            /* count length   */
+           j = j + 1;            /* increase outer loop counter */
+         end;
+
+                                /* numeric candidate found */
+         if l > 0 then do;
+
+       /*********************************************************/
+       /*  adjacent positions:                                  */
+       /*  matrix (1) pos-1 to len + 1: @@@@@@                  */
+       /*  matrix (2) pos-1 ,  len + 1: @4711@                  */
+       /*  matrix (3) pos-1 to len + 1: @@@@@@                  */
+       /*********************************************************/
+
+            if k > 1 then /* test position must fit in matrix's boundaries */
+              m = k-1;    /* left position before number                   */
+            else do;
+              m = 1;
+              put skip list ('+++pos corrected+++', k,'->', m);
+            end;
+
+            if m+l+1 <= len_val then  /* add one for length calculation */
+              n = l+2;    /* add two for one position before and after  */
+            else do;
+              n = len_val-m+1; /* add one for length calculation        */
+              put skip list ('+++len corrected+++', l,'->', n);
+            end;
+
+
+
+            if (index(substr(matrix(1),m,n),'@') > 0 )³
+               (index(substr(matrix(2),m,n),'@') > 0 )³
+               (index(substr(matrix(3),m,n),'@') > 0 )
+            then do;
+              if (dbg = 1 ³ dbg = 3)
+              then do;
+                 put skip edit
+                  ( 'PartNo at Record: ', line_count,
+                  'pos: ' , k, 'len: ' , l)
+
+                  (a(20),f(3),x(2),a(5),f(3),x(2),a(5),f(3));
+                put skip list (substr(matrix(1),m,n) );
+                put skip list (substr(matrix(2),m,n) );
+                put skip list (substr(matrix(3),m,n) );
+              end; /* if dbg */
+
+              select;
+                when (l = 1) do;
+                   digit_1 = substr(matrix(2),k,l);
+                   part_no = digit_1;
+                end;
+                when (l = 2) do;
+                   digit_2 = substr(matrix(2),k,l);
+                   part_no = digit_2;
+                end;
+                when (l = 3) do;
+                   digit_3 = substr(matrix(2),k,l);
+                   part_no = digit_3;
+                end;
+                when (l = 4) do;
+                   digit_4 = substr(matrix(2),k,l);
+                   part_no = digit_4;
+                end;
+                when (l = 5) do;
+                   digit_5 = substr(matrix(2),k,l);
+                   part_no = digit_5;
+                end;
+                when (l = 6) do;
+                   digit_6 = substr(matrix(2),k,l);
+                   part_no = digit_6;
+                end;
+              otherwise
+                 put skip list ('**** Error: PartNo too small!!! ***');
+              end;  /* select      */
+              part_no_count = part_no_count +1;
+              total_sum = total_sum + part_no;
+              if (dbg = 1 ³ dbg = 3) then put skip data (part_no, total_sum);
+            end;    /* if adjacent */
+            else do;
+              if (dbg = 1 ³ dbg = 3)
+              then do;
+                 put skip edit
+                  ( 'Onlynmbr at Record: ', line_count,
+                  'pos: ' , k, 'len: ' , l)
+
+                  (a(20),f(3),x(2),a(5),f(3),x(2),a(5),f(3));
+                 put skip list (substr(matrix(1),m,n) );
+                 put skip list (substr(matrix(2),m,n) );
+                 put skip list (substr(matrix(3),m,n) );
+                 put skip list ('Onlynmbr:', substr(matrix(2),k,l));
+              end; /* if dbg */
+              onlynmbr_count = onlynmbr_count + 1;
+            end;   /* else adjacent */
+            l = 0;  /* reset pos, length */
+            k = 0;
+         end;       /* if l > 0              */
+       end;         /* do loop               */
+    end;            /* if matrix initialized */
+ end test;
+
+ end aoc03;
+

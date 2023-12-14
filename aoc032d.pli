@@ -1,0 +1,510 @@
+ /***********************************************************************/
+ /*                                                                     */
+ /* aoc 23 day three, part  2 final version                             */
+ /*                                                                     */
+ /* must be compiled with option: MARGINS(2,80)                         */
+ /*                                                                     */
+ /***********************************************************************/
+ aoc03: proc options(main);
+
+ dcl infile file record sequential;
+
+ dcl (len_val,i,line_count) fixed bin (15) init (0);
+
+ dcl eof bit (1) init ('0'b);
+ dcl dbg bin fixed (15) init (0); /* debug level     */
+
+ dcl count pic '999';
+ dcl 1 digits based (addr(count)),
+       5 left_digit   pic '9' ,
+       5 middle_digit pic '9' ,
+       5 right_digit  pic '9';
+
+ dcl part_no dec fixed (15) init (0);
+ dcl part_no_count dec fixed (7) init (0);
+ dcl onlynmbr_count dec fixed (7) init (0);
+
+ dcl total_sum pic 'zzzzzzzzzzzzzz9' init (0);
+ dcl NUMBER    pic '(3)9' init (0);
+
+ dcl matrix (3) char (140) init ((*)' ');
+ dcl teststring char (140) based(testptr);
+ dcl testptr ptr;
+
+ dcl digit_1 pic '9' init (0);
+ dcl digit_2 pic '(2)9' init (0);
+ dcl digit_3 pic '(3)9' init (0);
+ dcl digit_4 pic '(4)9' init (0);
+ dcl digit_5 pic '(5)9' init (0);
+ dcl digit_6 pic '(6)9' init (0);
+
+ dcl instring character (255) init (' ');
+
+ dcl (inlist,length,addr,substr,translate,index,verify,trim) builtin;
+
+ dcl (to_string   value ('@@@@@@@@@@@@@@@'),
+        from_string value ('-=+$%&/@*#<>³^')) char;
+ on endfile(infile) eof = '1'b;
+
+ /***********************************************************************/
+ /* Main Routine                                                        */
+ /***********************************************************************/
+
+ read file (infile) into (instring); /* first read    */
+ do while (^eof & instring ^= '/*'); /* eof indicator for debug */
+ /* instring = translate (instring,to_string,from_string); */
+    line_count = line_count + 1;
+    if dbg = 3 then put skip (2) data (line_count);
+ /* len_val = length(instring);  */
+    if dbg = 3 then put skip data (instring);
+ /* i = verify(instring,from_string³³' .0123456789');
+    if i > 0
+      then do;
+         put skip list ('+++ non translated Character found +++');
+         put skip list (substr(instring,i,1));
+      end;                                                          */
+
+    matrix (1) = matrix (2);
+    matrix (2) = matrix (3);
+    matrix (3) = substr(instring,1,140);
+
+    call test;
+
+
+    read file (infile) into (instring);
+ end; /* do while */
+
+ matrix (1) = matrix (2);         /* Last Record                    */
+ matrix (2) = matrix (3);
+ matrix (3) = ' ';
+
+ call test;
+ put skip list ('**** Finish !!! Sumup: ', total_sum);
+ put skip data (part_no_count, onlynmbr_count);
+
+ /***********************************************************************/
+ /* Test adjacency to gear                                              */
+ /***********************************************************************/
+ test: proc;
+
+    dcl (j,k,l,m,n,r,start,len,adjacent_count,le,ri) bin fixed (15) init (0);
+    dcl (adjacent_count1) bin fixed (15) init (0);
+    dcl (mult1, mult2) dec fixed (5,0) init (0);
+    dcl product dec fixed (15) init (0);
+    dcl number1 pic '(3)9' ;
+    dcl number2 pic '(3)9' ;
+    dcl (sta1,end1,sta2,end2) bin fixed (15) ;
+
+    if matrix (2) = ' '           /* Matrix set up ?               */
+    then;
+    else do;
+       if dbg = 3 then do;
+          put skip list ('Record',line_count, ' in Test Position');
+          put skip data (matrix(2));
+       end;
+
+       testptr = addr(matrix(2));
+       len_val = length(teststring);
+       if dbg = 3 then
+          put skip data (len_val);
+       do j = 1 to len_val;
+         do while (substr(teststring,j,1) = '*' & (j <= len_Val));
+
+           if k = 0 then
+              k = j;             /* save start pos */
+           l = l + 1;            /* count length   */
+           j = j + 1;            /* increase outer loop counter */
+         end;
+
+
+         if l > 0 then do;      /* asterisk found (length > 0)  */
+       /*********************************************************/
+       /*  adjacent positions:          432101234               */
+       /*  ---------------------------------------------------- */
+       /*  matrix (1) pos-1 to pos + 1: ..987.... 1             */
+       /*  matrix (2) pos-1 to pos + 1: ...1*9... 2             */
+       /*  matrix (3) pos-1 to pos + 1: .123..45. 3             */
+       /*********************************************************/
+
+            if k > 1 then /* test position must fit in matrix's boundaries */
+              le = k-1;   /* left position before asterisk                 */
+            else do;
+              le = 1;
+              put skip list ('+++left pos corrected+++', k,'->', le );
+            end;
+
+            if k < len_val then     /* right position after asterisk */
+              ri = k+1;
+            else do;
+              ri = len_val;
+              put skip list ('+++right pos corrected+++', k,'->', ri);
+            end;
+
+
+            adjacent_count = 0;    /* gear candidate         */
+            adjacent_count1 = 0;   /* number candidate count */
+
+              if   (inlist(substr(matrix(1),le,1),
+                   '1','2','3','4','5','6','7','8','9','0'))   ³
+                   ( inlist(substr(matrix(1),k,1),
+                    '1','2','3','4','5','6','7','8','9','0'))  ³
+                   (  inlist(substr(matrix(1),ri,1),
+                     '1','2','3','4','5','6','7','8','9','0'))
+                 then do;                 /* number above         */
+                   if (findn(le-3,ri+3,matrix(1),
+                       number1,sta1,end1,number2,sta2,end2))
+                      then do;
+                         if number1 > 0
+                         then do;
+                            if (end1 = le ³    /* number1 left above,         */
+                               (sta1 <= k &    /* overlapping or right above  */
+                                end1 >= k)³
+                                sta1 = ri)
+                            then do;
+                               if mult1 = 0 then
+                                  mult1 = number1;
+                               else
+                                  mult2 = number1;
+                               adjacent_count1 = adjacent_count1 + 1;
+                            end;
+                         end;
+                         if number2 > 0
+                         then do;
+                            if (end2 = le ³    /* number2 left above,         */
+                               (sta2 <= k &    /* overlapping or right above  */
+                                end2 >= k   )³
+                                sta2 = ri)
+                            then do;
+                               if mult1 = 0 then
+                                  mult1 = number2;
+                               else
+                                  mult2 = number2;
+                               adjacent_count1 = adjacent_count1 + 1;
+                            end;
+                         end;
+                      end;
+                      adjacent_count = adjacent_count + 1;
+                      if dbg = 3 then do;
+                         put skip list ('$$$ above       $$');
+                         put skip list (substr(matrix(1),l,3));
+                         put skip data (sta1,end1,sta2,end2);
+                         put skip data (adjacent_count);
+                      end;
+                 end;
+
+
+
+              if   ( inlist(substr(matrix(2),le,1),
+                    '1','2','3','4','5','6','7','8','9','0'))
+                 then do;
+                   if (findn(le-3,k,matrix(2),
+                       number1,sta1,end1,number2,sta2,end2))
+                      then do;
+                         if number1 > 0
+                         then do;
+                            if  end1 <= le    /* number1 left          */
+                            then do;
+                               if mult1 = 0 then
+                                  mult1 = number1;
+                               else
+                                  mult2 = number1;
+                               adjacent_count1 = adjacent_count1 + 1;
+                            end;
+                         end;
+                         if number2 > 0
+                         then do;
+                            if  end2 <= le    /* number2 left          */
+                            then do;
+                               if mult1 = 0 then
+                                  mult1 = number2;
+                               else
+                                  mult2 = number2;
+                               adjacent_count1 = adjacent_count1 + 1;
+                            end;
+                         end;
+                      end;
+                      adjacent_count = adjacent_count + 1;
+                      if dbg = 3 then do;
+                         put skip list ('$$$ left       $$$');
+                         put skip list (substr(matrix(1),l,3));
+                         put skip data (sta1,end1,sta2,end2);
+                         put skip data (adjacent_count);
+                      end;
+                 end;
+              if   ( inlist(substr(matrix(2),ri,1),
+                    '1','2','3','4','5','6','7','8','9','0'))
+                 then do;
+                   if (findn(ri,ri+3,matrix(2),
+                       number1,sta1,end1,number2,sta2,end2))
+                      then do;
+                         if number1 > 0
+                         then do;
+                            if  end1 >= ri   /* number1 right         */
+                            then do;
+                               if mult1 = 0 then
+                                  mult1 = number1;
+                               else
+                                  mult2 = number1;
+                               adjacent_count1 = adjacent_count1 + 1;
+                            end;
+                         end;
+                         if number2 > 0
+                         then do;
+                            if  end2 >= ri   /* number2 right         */
+                            then do;
+                               if mult1 = 0 then
+                                  mult1 = number2;
+                               else
+                                  mult2 = number2;
+                               adjacent_count1 = adjacent_count1 + 1;
+                            end;
+                         end;
+                      end;
+                      adjacent_count = adjacent_count + 1;
+                      if dbg = 3 then do;
+                         put skip list ('$$$ right      $$$');
+                         put skip list (substr(matrix(1),l,3));
+                         put skip data (sta1,end1,sta2,end2);
+                         put skip data (adjacent_count);
+                      end;
+                 end;
+
+
+              if   (inlist(substr(matrix(3),le,1),
+                   '1','2','3','4','5','6','7','8','9','0') )  ³
+                   ( inlist(substr(matrix(3),k,1),
+                    '1','2','3','4','5','6','7','8','9','0') ) ³
+                   ( inlist(substr(matrix(3),ri,1),
+                    '1','2','3','4','5','6','7','8','9','0') )
+                 then do;
+                   if (findn(le-3,ri+3,matrix(3),
+                       number1,sta1,end1,number2,sta2,end2))
+                      then do;
+                         if number1 > 0
+                         then do;
+                            if ( end1 = le ³   /* number1 left below,         */
+                                               /* overlapping or right above  */
+
+                               (sta1 <= k &
+                                end1 >= k)  ³
+
+
+                                sta1  = ri )
+                            then do;
+                               if mult1 = 0 then
+                                  mult1 = number1;
+                               else
+                                  mult2 = number1;
+                               adjacent_count1 = adjacent_count1 + 1;
+                            end;
+                         end;
+                         if number2 > 0
+                         then do;
+                            if ( end2 = le ³  /* number2 left below,         */
+                                               /* overlapping or right above  */
+
+                               (sta2 <= k &
+                                end2 >= k)  ³
+
+
+                                sta2 = ri  )
+                            then do;
+                               if mult1 = 0 then
+                                  mult1 = number2;
+                               else
+                                  mult2 = number2;
+                               adjacent_count1 = adjacent_count1 + 1;
+                            end;
+                         end;
+                      end;
+                      adjacent_count = adjacent_count + 1;
+                      if dbg = 3 then do;
+                         put skip list ('$$$ below      $$$');
+                         put skip list (substr(matrix(1),l,3));
+                         put skip data (sta1,end1,sta2,end2);
+                         put skip data (adjacent_count);
+                      end;
+                 end;
+
+
+
+            if adjacent_count1 > 2
+            then do;
+              put skip list ('+++ Error proc findn. More than 2 adj numbers ');
+            end;
+
+            if adjacent_count  > 1
+            then do;
+                 if adjacent_count ^= adjacent_count1 then do;
+                   put skip list ('+++ Abweichung Gear / Number +++');
+                   put skip data (adjacent_count, adjacent_count1);
+                 end;
+
+                 if (dbg = 1 ³ dbg = 3) ³ (adjacent_count ^= adjacent_count1)
+                 then do;
+                    start = k-4;
+                    len  =  9;      /*  ..34*.12.   */
+                                    /*  ---------   */
+                                    /* -432101234   */
+
+                    if start < 1
+                    then do;
+                       start = 1;
+                    end;
+                    if len > len_val
+                    then do;
+                       len  = len_val - start + 1;
+                    end;
+                    put skip edit
+                     ( 'Gear   at Record: ', line_count,
+                     'pos: ' , k, 'len: ' , l)
+
+                     (a(20),f(3),x(2),a(5),f(3),x(2),a(5),f(3));
+                   put skip list (substr(matrix(1),start,len) );
+                   put skip list (substr(matrix(2),start,len) );
+                   put skip list (substr(matrix(3),start,len) );
+                 end; /* if dbg */
+              end;    /* if adjacent_count > 1 */
+
+            if adjacent_count1 > 1
+            then do;
+              product = mult1 * mult2;
+              total_sum     = total_sum     + product;
+              if (dbg = 1 ³ dbg = 3) then
+                put skip data (adjacent_count1,mult1,mult2,product,total_sum);
+              mult1 = 0;
+              mult2 = 0;
+              adjacent_count1 = 0;
+            end;
+
+            l = 0;      /* reset pos, length       */
+            k = 0;
+            mult1 = 0;  /* reset mult fields       */
+            mult2 = 0;
+            product = 0;
+            adjacent_count1 = 0; /* counter  */
+         end;       /* if l > 0              */
+       end;         /* do loop               */
+    end;            /* if matrix initialized */
+ end test;
+ /***********************************************************************/
+ /* find numbers                                                        */
+ /***********************************************************************/
+ findn: proc(start,end,teststring,number1,sta1,end1,
+             number2,sta2,end2) returns (bit(1));
+
+    dcl (e,j,k,l,number_count) bin fixed (15) init (0);
+    dcl number1 pic '(3)9' ;
+    dcl number2 pic '(3)9' ;
+    dcl (sta1,end1,sta2,end2) bin fixed (15) ;
+    dcl rv bit(1) init ('0'b);  /* return value  */
+
+
+    dcl (start,end) fixed bin (15);
+    dcl teststring char (140);
+    dcl (in_number,in_number_old) bit (1) init ('0'b);
+
+    number1 = 0;                /* likely not necessary, local  */
+    number2 = 0;                /* variables are initalized with*/
+    number_count = 0;           /* each procedure call          */
+    k = 0;
+    l = 0;
+    e = 0;
+    in_number = '0'b;
+    sta1 = 0;
+    sta2 = 0;
+    end1 = 0;
+    end2 = 0;
+
+       if start < 1
+       then do;
+          start = 1;
+          put skip list ('+++ proc findn: start corrected +++');
+          put skip data (start);
+       end;
+       if end > len_val
+       then do;
+          end  = len_val;
+          put skip list ('+++ proc findn: end corrected +++');
+          put skip data (end);
+       end;
+
+       if (dbg = 1 ³ dbg = 3) then do;
+         put skip (2) list ('findn:teststring',
+         substr(teststring,start,end - start + 1));
+         put skip data (start,end);
+       end;
+
+       do j = start to end;
+         if (inlist(substr(teststring,j,1),
+         '0','1','2','3','4','5','6','7','8','9'))
+         then do;
+           in_number = '1'b;
+           if k = 0 then do;
+              k = j;             /* save start pos */
+           end;
+           e = j;                /* save end pos   */
+           l = l + 1;            /* count length   */
+           if dbg = 1 ³ dbg = 3
+           then do;
+              put skip data (k,l,j,in_number,number_count);
+              put skip list ('Zeichen: ', substr(teststring,j,1));
+           end;
+          end;
+         else
+           in_number = '0'b;
+
+         if ((^in_number) & (k>0)) ³ /* breakfrom number to other char */
+            (j>= end)
+         then do;
+           if (l > 0 & l <= 3)
+           then do;
+              if number1 = 0
+              then do;
+                 number1 = substr(teststring,k,l);      /* number found     */
+                 sta1 = k;
+                 end1 = e;
+               end;
+               else if number_count < 2                 /* only #1 and #2   */
+               then do;
+                 number2 = substr(teststring,k,l);
+                 sta2 = k;
+                 end2 = e;
+               end;
+               k = 0;
+               l = 0;
+               e = 0;
+               number_count = number_count + 1 ;
+           end;
+           if l > 3 then do;
+               put skip data (start,end);
+           end;
+
+         end;   /* break   */
+       end;     /* do loop */
+
+
+       if (number_count > 0) & (number_count <= 2)
+       then do;
+          if (dbg = 1 ³ dbg = 3) then
+             put skip data (number1, number2);
+          rv = '1'b;
+       end;
+       else do;
+         if number_count > 2
+           then do;
+              put skip list ('+++ Error in proc findn! More than 2 nbrs +++');
+              put skip data (line_count);
+              put skip (2) list ('findn:teststring',
+              substr(teststring,start,end - start));
+           end;
+         if (dbg = 1 ³ dbg = 3) then
+             put skip data (number1, number2);
+         rv = '1'b;
+       end;
+
+       return(rv);
+
+ end findn;
+ end aoc03;
+
